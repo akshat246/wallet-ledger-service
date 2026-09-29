@@ -1,0 +1,63 @@
+### Runnable in IntelliJ / VS Code REST Client. Replace the IDs after each step.
+@host = http://localhost:8080
+
+### 1. Create two users
+POST {{host}}/api/v1/users
+Content-Type: application/json
+
+{ "email": "alice@example.com", "name": "Alice", "phoneNumber": "9876543210" }
+
+###
+POST {{host}}/api/v1/users
+Content-Type: application/json
+
+{ "email": "bob@example.com", "name": "Bob" }
+
+### 2. Create a wallet for each (paste user ids)
+POST {{host}}/api/v1/wallets
+Content-Type: application/json
+
+{ "userId": "ALICE_USER_ID", "currency": "INR" }
+
+###
+POST {{host}}/api/v1/wallets
+Content-Type: application/json
+
+{ "userId": "BOB_USER_ID", "currency": "INR" }
+
+### 3. Fund Alice
+POST {{host}}/api/v1/transactions/deposit
+Content-Type: application/json
+Idempotency-Key: dep-0001
+
+{ "toWalletId": "ALICE_WALLET_ID", "amount": 1000.00, "description": "Initial top-up" }
+
+### 4. Transfer Alice -> Bob (run twice: second call returns 200 with replayed=true)
+POST {{host}}/api/v1/transactions/transfer
+Content-Type: application/json
+Idempotency-Key: tx-0001
+
+{ "fromWalletId": "ALICE_WALLET_ID", "toWalletId": "BOB_WALLET_ID", "amount": 250.50, "description": "Dinner" }
+
+### 5. Same key, different amount -> 422 IDEMPOTENCY_KEY_ERROR
+POST {{host}}/api/v1/transactions/transfer
+Content-Type: application/json
+Idempotency-Key: tx-0001
+
+{ "fromWalletId": "ALICE_WALLET_ID", "toWalletId": "BOB_WALLET_ID", "amount": 999.00 }
+
+### 6. Overdraw -> 422 INSUFFICIENT_FUNDS (and the same on retry with tx-0002)
+POST {{host}}/api/v1/transactions/withdraw
+Content-Type: application/json
+Idempotency-Key: tx-0002
+
+{ "fromWalletId": "BOB_WALLET_ID", "amount": 5000.00 }
+
+### 7. Inspect
+GET {{host}}/api/v1/wallets/ALICE_WALLET_ID/balance
+
+###
+GET {{host}}/api/v1/wallets/ALICE_WALLET_ID/ledger
+
+###
+GET {{host}}/api/v1/wallets/BOB_WALLET_ID/transactions
