@@ -1,13 +1,15 @@
 target/
 logs/
 *.log
+
 .idea/
 *.iml
+*.iws
 .vscode/
 .settings/
 .project
 .classpath
-.mvn/wrapper/maven-wrapper.jar
+
 *.class
 .DS_Store
 Thumbs.db

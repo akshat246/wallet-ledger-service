@@ -1,63 +1,86 @@
-### Runnable in IntelliJ / VS Code REST Client. Replace the IDs after each step.
+### Walkthrough of the API. Runnable in IntelliJ, or in VS Code with the REST Client
+### extension. Run the requests top to bottom, pasting ids as you go.
+
 @host = http://localhost:8080
 
-### 1. Create two users
+### 1. Create a user
 POST {{host}}/api/v1/users
 Content-Type: application/json
 
 { "email": "alice@example.com", "name": "Alice", "phoneNumber": "9876543210" }
 
-###
+### 2. Create a second user
 POST {{host}}/api/v1/users
 Content-Type: application/json
 
 { "email": "bob@example.com", "name": "Bob" }
 
-### 2. Create a wallet for each (paste user ids)
+### 3. Open a wallet for Alice (paste her user id)
 POST {{host}}/api/v1/wallets
 Content-Type: application/json
 
 { "userId": "ALICE_USER_ID", "currency": "INR" }
 
-###
+### 4. Open a wallet for Bob
 POST {{host}}/api/v1/wallets
 Content-Type: application/json
 
 { "userId": "BOB_USER_ID", "currency": "INR" }
 
-### 3. Fund Alice
+### 5. Fund Alice's wallet -> 201
 POST {{host}}/api/v1/transactions/deposit
 Content-Type: application/json
 Idempotency-Key: dep-0001
 
 { "toWalletId": "ALICE_WALLET_ID", "amount": 1000.00, "description": "Initial top-up" }
 
-### 4. Transfer Alice -> Bob (run twice: second call returns 200 with replayed=true)
+### 6. Transfer Alice -> Bob -> 201
 POST {{host}}/api/v1/transactions/transfer
 Content-Type: application/json
 Idempotency-Key: tx-0001
 
 { "fromWalletId": "ALICE_WALLET_ID", "toWalletId": "BOB_WALLET_ID", "amount": 250.50, "description": "Dinner" }
 
-### 5. Same key, different amount -> 422 IDEMPOTENCY_KEY_ERROR
+### 7. The same request again, as a client retry would send it.
+### -> 200 with "replayed": true, and the balances do not change.
+POST {{host}}/api/v1/transactions/transfer
+Content-Type: application/json
+Idempotency-Key: tx-0001
+
+{ "fromWalletId": "ALICE_WALLET_ID", "toWalletId": "BOB_WALLET_ID", "amount": 250.50, "description": "Dinner" }
+
+### 8. Same key, different amount -> 422 IDEMPOTENCY_KEY_ERROR
 POST {{host}}/api/v1/transactions/transfer
 Content-Type: application/json
 Idempotency-Key: tx-0001
 
 { "fromWalletId": "ALICE_WALLET_ID", "toWalletId": "BOB_WALLET_ID", "amount": 999.00 }
 
-### 6. Overdraw -> 422 INSUFFICIENT_FUNDS (and the same on retry with tx-0002)
+### 9. Overdraw -> 422 INSUFFICIENT_FUNDS.
+### Retrying with the same key returns the same rejection, not a late success.
 POST {{host}}/api/v1/transactions/withdraw
 Content-Type: application/json
 Idempotency-Key: tx-0002
 
 { "fromWalletId": "BOB_WALLET_ID", "amount": 5000.00 }
 
-### 7. Inspect
+### 10. Missing Idempotency-Key -> 400
+POST {{host}}/api/v1/transactions/transfer
+Content-Type: application/json
+
+{ "fromWalletId": "ALICE_WALLET_ID", "toWalletId": "BOB_WALLET_ID", "amount": 1.00 }
+
+### 11. Balance
 GET {{host}}/api/v1/wallets/ALICE_WALLET_ID/balance
 
-###
+### 12. Double-entry rows for the wallet, newest first
 GET {{host}}/api/v1/wallets/ALICE_WALLET_ID/ledger
 
-###
+### 13. Everything this wallet took part in
 GET {{host}}/api/v1/wallets/BOB_WALLET_ID/transactions
+
+### 14. All of a user's wallets
+GET {{host}}/api/v1/users/ALICE_USER_ID/wallets
+
+### 15. Health
+GET {{host}}/actuator/health

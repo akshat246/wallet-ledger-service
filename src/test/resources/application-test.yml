@@ -1,0 +1,23 @@
+# Integration tests exercise the database path only. Redis and Kafka are switched off so a
+# failing test always points at the service, never at missing infrastructure.
+spring:
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration
+      - org.springframework.boot.autoconfigure.data.redis.RedisRepositoriesAutoConfiguration
+      - org.springframework.boot.autoconfigure.kafka.KafkaAutoConfiguration
+  jpa:
+    show-sql: false
+
+app:
+  # No background purge running mid-assertion.
+  scheduling:
+    enabled: false
+  idempotency:
+    ttl: 24h
+
+logging:
+  level:
+    root: WARN
+    com.ledger.wallet: INFO
+    org.testcontainers: WARN
